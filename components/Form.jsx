@@ -84,14 +84,12 @@ const Form = () => {
         if (urls.length !== 0) localStorage.setItem("urls", JSON.stringify(urls));
     }, [urls]);
 
-    if (typeof window !== "undefined") {
-        useEffect(() => {
-            const urls = localStorage.getItem("urls");
-            const parsedUrls = urls ? JSON.parse(urls) : null;
-    
-            if (parsedUrls) setUrls(parsedUrls);
-        }, [window]);
-    }
+    useEffect(() => {
+        const urls = localStorage.getItem("urls");
+        const parsedUrls = urls ? JSON.parse(urls) : null;
+
+        if (parsedUrls) setUrls(parsedUrls);
+    }, [window]);
      
     return (
         <>
