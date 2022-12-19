@@ -1,5 +1,3 @@
-"use client";
-
 import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 import ListItems from "./ListItems";
@@ -12,6 +10,8 @@ const Form = () => {
     const urlRef = useRef(null);
     const [urls, setUrls] = useState([]);
     const [error, setError] = useState("");
+    const [mp3Data, setMP3Data] = useState([]);
+    const [downloading, setDownloading] = useState(false);
 
     const reg = /^((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube(-nocookie)?\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?$/g;
     const id = /(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/;
@@ -32,42 +32,62 @@ const Form = () => {
         if (newArr.length === 0) localStorage.removeItem("urls");
     }
 
-    const handleDownload = (e) => {
+    const handleDownload = async (e) => {
         e.preventDefault();
-        // if (urls.length > 0) {
-        //     urls.forEach(async e => {
-        //         const options = {
-        //             method: 'GET',
-        //             url: "https://youtube-mp36.p.rapidapi.com/dl",
-        //             params: {id: e},
-        //             headers: {
-        //               'X-RapidAPI-Key': process.env.NEXT_PUBLIC_KEY,
-        //               'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
-        //             }
-        //         }
-        //         let result;
-        //         try {
-        //             // result = await fetchData(options);
-        //             // console.log(result);
-        //             const req = await axios.post("/api/hello", { data: ["https://malpha.123tokyo.xyz/get.php/6/14/0xyxtzD54rM.mp3?cid=MmEwMTo0Zjg6YzAxMDo5ZmE2OjoxfE5BfERF&h=ftCTJqqodhM8AEu4v7kidg&s=1671404694&n=Given%20Up%20%5BOfficial%20Music%20Video%5D%20-%20Linkin%20Park",
-        //             "https://mgamma.123tokyo.xyz/get.php/d/96/yoCD5wZEgo4.mp3?cid=MmEwMTo0Zjg6YzAxMDo5ZmE2OjoxfE5BfERF&h=AUzoC1TFXxHkgs-B3S4VzA&s=1671404694&n=Points%20Of%20Authority%20-%20Linkin%20Park%20%28Hybrid%20Theory%29"] });
-        //             console.log(req);
-        //         } catch(err) {
-        //             setError("Failed to download one of the videos, try again with different url.");
-        //         }
-        //     });
-        // }
-        const download = (itemname, item) => {
-            return axios.get(item, { responseType: "blob", headers: {"Access-Control-Allow-Origin": "*"} }).then((res) => {
-                zip.file(itemname, res.data);
-                zip.generateAsync({type: "blob"}).then(content => {
-                    saveAs(content, "example.zip");
-                })
+        if (!downloading && urls.length > 0) {
+            setDownloading(true);
+            urls.forEach(async e => {
+                const options = {
+                    method: 'GET',
+                    url: "https://youtube-mp36.p.rapidapi.com/dl",
+                    params: {id: e},
+                    headers: {
+                      'X-RapidAPI-Key': process.env.NEXT_PUBLIC_KEY,
+                      'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+                    }
+                }
+                let result;
+                result = await fetchData(options);
+                setMP3Data((prev) => [...prev, { link: result.link, title: result.title }]);
             });
         }
-
-        download("a7x.mp3", "https://mdelta.123tokyo.xyz/get.php/c/79/-c7sU6eVNLM.mp3?cid=MmEwMTo0Zjg6YzAxMDo5ZmE2OjoxfE5BfERF&h=lG3opGs04BQ8PS9dtVa5GA&s=1671412440&n=Avenged%20Sevenfold%20-%20This%20Means%20War%20%28Alternate%20Music%20Video%29");
     }
+
+    useEffect(() => {
+        if (urls.length === mp3Data.length && urls.length !== 0) {
+            const fetchzipfile = async () => {
+                try {
+                    const req = await axios.post("/api/tozip", { data: mp3Data });
+                    const data = await req.data;
+
+                    const b64toFile = (b64Data, filename, contentType) => {
+                        var sliceSize = 512;
+                        var byteCharacters = atob(b64Data);
+                        var byteArrays = [];
+                    
+                        for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                            var slice = byteCharacters.slice(offset, offset + sliceSize);
+                            var byteNumbers = new Array(slice.length);
+                    
+                            for (var i = 0; i < slice.length; i++) {
+                                byteNumbers[i] = slice.charCodeAt(i);
+                            }
+                            var byteArray = new Uint8Array(byteNumbers);
+                            byteArrays.push(byteArray);
+                        }
+                        var file = new File(byteArrays, filename, {type: contentType});
+                        return file;
+                    }
+                    saveAs(b64toFile(data, "default.txt", "application/zip"), "mp3tozip.zip");
+                    setDownloading(false);
+                } catch(err) {
+                    setError("Failed to download one of the videos, try again with different url.");
+                    setDownloading(false);
+                }
+            }
+            fetchzipfile();
+        }
+    }, [mp3Data]);
 
     const fetchData = async (options) => {
         try {
@@ -84,17 +104,17 @@ const Form = () => {
         if (urls.length !== 0) localStorage.setItem("urls", JSON.stringify(urls));
     }, [urls]);
 
-    // useEffect(() => {
-    //     const urls = localStorage.getItem("urls");
-    //     const parsedUrls = urls ? JSON.parse(urls) : null;
+    useEffect(() => {
+        const urls = localStorage.getItem("urls");
+        const parsedUrls = urls ? JSON.parse(urls) : null;
 
-    //     if (parsedUrls) setUrls(parsedUrls);
-    // }, [window]);
+        if (parsedUrls) setUrls(parsedUrls);
+    }, []);
      
     return (
         <>
             {error !== "" && 
-                <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800" role="alert">
+                <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800 absolute top-10" role="alert">
                     <span className="font-medium">Error occured!</span> {error}
                 </div>
             }
@@ -104,9 +124,11 @@ const Form = () => {
                         <input ref={urlRef} type="text" id="default-text" className="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Place urls here..." />
                         <button onClick={(e) => handleInputBlur(e)} className="text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 bg-blue-700">Add</button>
                     </div>
-                    <button className="dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded flex items-center m-auto">
-                        <svg className="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/></svg>
-                        <span onClick={(e) => handleDownload(e)}>Download</span>
+                    <button onClick={(e) => handleDownload(e)} className={`${downloading ? 'pointer-events-none dark:bg-blue-400 dark:hover:bg-blue-400 bg-blue-600 hover:bg-blue-600': ''} dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded flex items-center m-auto`}>
+                        { downloading ? <Spinner /> :
+                            <svg className="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/></svg> 
+                        }
+                        <span>Download</span>
                     </button>
                 </form>
                 {
@@ -121,6 +143,15 @@ const Form = () => {
                 }
             </div>
         </>
+    )
+}
+
+const Spinner = () => {
+    return (
+        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
     )
 }
 
