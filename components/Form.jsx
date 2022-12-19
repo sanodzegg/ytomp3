@@ -79,6 +79,8 @@ const Form = () => {
                         return file;
                     }
                     saveAs(b64toFile(data, "default.txt", "application/zip"), "mp3tozip.zip");
+                    localStorage.removeItem("urls");
+                    setUrls([]);
                     setDownloading(false);
                 } catch(err) {
                     setError("Failed to download one of the videos, try again with different url.");
