@@ -13,6 +13,7 @@ export default async function handler(req, res) {
                     const innerData = [];
 
                     res.on("data", (chunk) => {
+                        console.log(chunk);
                         innerData.push(chunk);
                     }).on("end", () => {
                         let buffer = Buffer.concat(innerData);
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
     
     try {
         await doRequest();
+        console.log(proms);
 
         const zip = new JSZip();
         const fold = zip.folder('songs');
