@@ -16,6 +16,7 @@ export default async function handler(req, res) {
                         console.log(chunk);
                         innerData.push(chunk);
                     }).on("end", () => {
+                        console.log("ended")
                         let buffer = Buffer.concat(innerData);
                         proms.push({ buff: buffer, title: data[i].title });
                         if (proms.length === data.length) {
